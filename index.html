@@ -14,7 +14,7 @@
         // חיבור ל-Supabase שלכם
         const supabaseUrl = 'https://saimcftloeorzqowjpal.supabase.co';
         const supabaseKey = 'sb_publishable_WrZ4VtkXGmxpKwyTSvQJOA_h6iefkLv';
-        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
     </script>
 
     <div class="max-w-md mx-auto px-4 py-6">
