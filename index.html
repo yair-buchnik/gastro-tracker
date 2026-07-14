@@ -3,79 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מעקב ארוחות ומשקל</title>
+    <title>הנסיכה הקטנה - מעקב משפחתי</title>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Chart.js for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans min-h-screen pb-12">
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen pb-16">
+
+    <!-- קונפיגורציית חיבור ל-Supabase -->
     <script>
-        // חיבור ל-Supabase שלכם
         const supabaseUrl = 'https://saimcftloeorzqowjpal.supabase.co';
         const supabaseKey = 'sb_publishable_WrZ4VtkXGmxpKwyTSvQJOA_h6iefkLv';
         const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        // משתני עריכה גלובליים
+        let editingMealId = null;
+        let editingDiaperId = null;
+        let editingWeightId = null;
     </script>
 
     <div class="max-w-md mx-auto px-4 py-6">
+        
         <!-- כותרת ראשית -->
-        <header class="text-center mb-8">
+        <header class="text-center mb-6">
             <h1 class="text-3xl font-bold text-pink-600">הנסיכה הקטנה 👶💖</h1>
-            <p class="text-gray-500 mt-1">מעקב ארוחות ומשקל משותף</p>
+            <p class="text-gray-500 mt-1">מעקב ארוחות, טיטולים ומשקל חכם</p>
         </header>
 
-        <!-- כרטיסיית ניווט מהירה -->
-        <div class="flex justify-center mb-6">
-            <div class="bg-white rounded-lg p-1 shadow flex w-full max-w-xs">
-                <button id="btn-meals" onclick="switchTab('meals')" class="flex-1 py-2 text-center rounded-md font-medium text-pink-600 bg-pink-50 transition-all">🍽️ ארוחות</button>
-                <button id="btn-weight" onclick="switchTab('weight')" class="flex-1 py-2 text-center rounded-md font-medium text-gray-500 hover:bg-gray-50 transition-all">⚖️ משקל</button>
-            </div>
+        <!-- אזור הודעות פירגון קופצות -->
+        <div id="compliment-toast" class="hidden fixed top-5 left-1/2 transform -translate-x-1/2 z-50 w-11/12 max-w-sm bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold p-4 rounded-2xl shadow-2xl text-center border-2 border-white animate-bounce">
+            <p id="compliment-text"></p>
         </div>
 
-        <!-- 1. אזור ארוחות -->
-        <div id="tab-meals-content">
-            <!-- טופס ארוחה -->
-            <div class="bg-white rounded-2xl p-6 shadow-md border border-gray-100 mb-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-                        <span>➕ תיעוד ארוחה חדשה</span>
-                    </h2>
-                </div>
+        <!-- כרטיסיות ניווט (Tabs) -->
+        <div class="flex justify-between mb-6 bg-white rounded-xl p-1 shadow border border-gray-100">
+            <button id="btn-meals" onclick="switchTab('meals')" class="flex-1 py-2.5 text-center rounded-lg font-bold text-pink-600 bg-pink-50 transition-all text-sm">🍽️ ארוחות</button>
+            <button id="btn-diapers" onclick="switchTab('diapers')" class="flex-1 py-2.5 text-center rounded-lg font-bold text-gray-500 hover:bg-gray-50 transition-all text-sm">💩 טיטולים</button>
+            <button id="btn-weight" onclick="switchTab('weight')" class="flex-1 py-2.5 text-center rounded-lg font-bold text-gray-500 hover:bg-gray-50 transition-all text-sm">⚖️ משקל</button>
+        </div>
 
+        <!-- ============================================== -->
+        <!-- 1. כרטיסיית ארוחות -->
+        <!-- ============================================== -->
+        <div id="tab-meals-content" class="space-y-6">
+            <!-- טופס ארוחה -->
+            <div class="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
+                <h2 id="meal-form-title" class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">➕ תיעוד ארוחה חדשה</h2>
                 <form id="meal-form" onsubmit="saveMeal(event)" class="space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
+                    
+                    <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-semibold text-gray-500 mb-1">תאריך</label>
-                            <input type="date" id="meal-date" required class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500">
+                            <input type="date" id="meal-date" required class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-500">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-gray-500 mb-1">כמות (מ"ל)</label>
-                            <input type="number" id="meal-amount" placeholder="90" required class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500">
+                            <input type="number" id="meal-amount" placeholder="90" required class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-500">
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-semibold text-gray-500 mb-1">שעת התחלה</label>
-                            <input type="time" id="meal-start" required class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500">
+                            <input type="time" id="meal-start" required class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-500">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-gray-500 mb-1">שעת סיום</label>
-                            <input type="time" id="meal-end" class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500">
+                            <input type="time" id="meal-end" class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-500">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">סוג האכלה</label>
+                            <select id="meal-type" class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-500">
+                                <option value="גסטרוסטום">גסטרוסטום 🍼</option>
+                                <option value="אוכל מוסמך מבקבוק">אוכל מוסמך מבקבוק 🍼🌾</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">מי האכיל?</label>
+                            <select id="meal-fed-by" class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-500">
+                                <option value="מוריה">מוריה ❤️</option>
+                                <option value="יאיר">יאיר 👑</option>
+                                <option value="אחר">מישהו אחר 🙌</option>
+                            </select>
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-gray-500 mb-1">סוג האכלה</label>
-                        <select id="meal-type" class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500">
-                            <option value="גסטרוסטום">גסטרוסטום 🍼</option>
-                            <option value="אוכל מוסמך מבקבוק">אוכל מוסמך מבקבוק 🍼🌾</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 mb-1">מצב הארוחה (איך אכלה?)</label>
-                        <select id="meal-status" class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500">
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">איך אכלה?</label>
+                        <select id="meal-status" class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-500">
                             <option value="סיימה הכל בשמחה">סיימה הכל בשמחה ✅</option>
                             <option value="אכלה את הרוב">אכלה את הרוב 👍</option>
                             <option value="אכלה חצי">אכלה חצי 🌗</option>
@@ -84,70 +105,209 @@
                         </select>
                     </div>
 
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 mb-1">הערות מיוחדות</label>
-                        <textarea id="meal-notes" rows="2" placeholder="למשל: הייתה עייפה, פלטה קצת בסוף..." class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"></textarea>
+                    <!-- השתנקויות וסקשן -->
+                    <div class="bg-red-50/50 p-3 rounded-lg border border-red-100 flex justify-around">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="meal-choking" class="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500">
+                            <span class="text-xs font-bold text-red-800">היו השתנקויות ⚠️</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="meal-suction" class="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500">
+                            <span class="text-xs font-bold text-red-800">היה שימוש בסקשן 💨</span>
+                        </label>
                     </div>
 
-                    <button type="submit" id="btn-save-meal" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-4 rounded-xl shadow transition-colors flex items-center justify-center gap-2">
-                        <span>💾 שמור ארוחה</span>
-                    </button>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">הערות מיוחדות</label>
+                        <textarea id="meal-notes" rows="2" placeholder="למשל: הייתה עייפה, פלטה קצת בסוף..." class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-500"></textarea>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button type="submit" id="btn-save-meal" class="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-4 rounded-xl shadow transition-colors flex items-center justify-center gap-2">
+                            <span>💾 שמור ארוחה</span>
+                        </button>
+                        <button type="button" id="btn-cancel-meal" onclick="cancelMealEdit()" class="hidden bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-4 rounded-xl transition-colors">בטל</button>
+                    </div>
                 </form>
             </div>
 
-            <!-- סך הכל יומי של כמויות -->
-            <div class="bg-gradient-to-r from-pink-500 to-pink-600 text-white rounded-2xl p-4 shadow-md mb-6 flex justify-between items-center">
-                <div>
-                    <h3 class="text-sm font-semibold opacity-90">סך הכל אכל היום (מ"ל):</h3>
-                    <p class="text-xs opacity-75">לפי תאריך היום הנוכחי</p>
+            <!-- דאשבורד ארוחות מהיר -->
+            <div class="grid grid-cols-3 gap-2">
+                <div class="bg-gradient-to-br from-pink-500 to-pink-600 text-white rounded-xl p-3 shadow text-center">
+                    <p class="text-[10px] opacity-80 font-bold">סכום יומי</p>
+                    <p class="text-lg font-black mt-1"><span id="daily-total-ml">0</span> מ"ל</p>
                 </div>
-                <div class="text-2xl font-black">
-                    <span id="daily-total-ml">0</span> מ"ל
+                <div class="bg-white border border-gray-100 rounded-xl p-3 shadow text-center text-gray-700">
+                    <p class="text-[10px] text-gray-400 font-bold">ארוחות ביום</p>
+                    <p class="text-lg font-black mt-1"><span id="stats-meals-count">0</span></p>
+                </div>
+                <div class="bg-white border border-gray-100 rounded-xl p-3 shadow text-center text-gray-700">
+                    <p class="text-[10px] text-gray-400 font-bold">זמן ממוצע</p>
+                    <p class="text-sm font-black mt-1.5"><span id="stats-avg-duration">0</span> דק'</p>
+                </div>
+            </div>
+
+            <!-- גרף ארוחות שבועי -->
+            <div class="bg-white rounded-2xl p-4 shadow-md border border-gray-100">
+                <h3 class="text-sm font-bold text-gray-700 mb-2">📊 גרף כמויות יומי (מ"ל)</h3>
+                <div class="h-44 w-full">
+                    <canvas id="mealsChart"></canvas>
                 </div>
             </div>
 
             <!-- רשימת ארוחות אחרונות -->
-            <div class="bg-white rounded-2xl p-6 shadow-md border border-gray-100">
+            <div class="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
                 <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">📋 ארוחות אחרונות</h2>
-                <div id="meals-list" class="space-y-3 text-center py-4 text-gray-400">טוען ארוחות...</div>
+                <div id="meals-list" class="space-y-4 text-center py-4 text-gray-400">טוען ארוחות...</div>
             </div>
         </div>
 
-        <!-- 2. אזור משקל -->
-        <div id="tab-weight-content" class="hidden">
-            <!-- טופס משקל -->
-            <div class="bg-white rounded-2xl p-6 shadow-md border border-gray-100 mb-6">
-                <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">⚖️ תיעוד משקל חדש</h2>
-                <form id="weight-form" onsubmit="saveWeight(event)" class="space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
+        <!-- ============================================== -->
+        <!-- 2. כרטיסיית טיטולים -->
+        <!-- ============================================== -->
+        <div id="tab-diapers-content" class="hidden space-y-6">
+            <!-- טופס טיטול -->
+            <div class="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
+                <h2 id="diaper-form-title" class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">💩 תיעוד טיטול</h2>
+                <form id="diaper-form" onsubmit="saveDiaper(event)" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-semibold text-gray-500 mb-1">תאריך</label>
-                            <input type="date" id="weight-date" required class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500">
+                            <input type="date" id="diaper-date" required class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-500">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-gray-500 mb-1">משקל בק"ג (למשל: 4.250)</label>
-                            <input type="number" step="0.001" id="weight-value" placeholder="4.200" required class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500">
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">שעה</label>
+                            <input type="time" id="diaper-time" required class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-500">
                         </div>
                     </div>
-                    <button type="submit" id="btn-save-weight" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-4 rounded-xl shadow transition-colors flex items-center justify-center gap-2">
-                        <span>💾 שמור משקל</span>
-                    </button>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">סוג יציאה</label>
+                            <select id="diaper-type" class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-500">
+                                <option value="פיפי">פיפי 💦</option>
+                                <option value="קקי">קקי 💩</option>
+                                <option value="פיפי וקקי">פיפי וקקי 💦💩</option>
+                                <option value="יבש">יבש / נקי ⚪</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">כמות</label>
+                            <select id="diaper-amount" class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-500">
+                                <option value="מעט">מעט ⏳</option>
+                                <option value="בינוני">בינוני 👍</option>
+                                <option value="הרבה">הרבה 🌊</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">הערות / תיאור</label>
+                        <textarea id="diaper-notes" rows="2" placeholder="למשל: צבע צהבהב, ריק, נוזלי וכו'..." class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-500"></textarea>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button type="submit" id="btn-save-diaper" class="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-4 rounded-xl shadow transition-colors flex items-center justify-center gap-2">
+                            <span>💾 שמור טיטול</span>
+                        </button>
+                        <button type="button" id="btn-cancel-diaper" onclick="cancelDiaperEdit()" class="hidden bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-4 rounded-xl transition-colors">בטל</button>
+                    </div>
                 </form>
             </div>
 
-            <!-- רשימת משקלים אחרונים -->
-            <div class="bg-white rounded-2xl p-6 shadow-md border border-gray-100">
-                <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">📋 מעקב שקילה</h2>
-                <div id="weights-list" class="space-y-3 text-center py-4 text-gray-400">טוען משקלים...</div>
+            <!-- רשימת טיטולים אחרונים -->
+            <div class="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">📋 מעקב יציאות</h2>
+                <div id="diapers-list" class="space-y-4 text-center py-4 text-gray-400">טוען טיטולים...</div>
             </div>
         </div>
+
+        <!-- ============================================== -->
+        <!-- 3. כרטיסיית משקל -->
+        <!-- ============================================== -->
+        <div id="tab-weight-content" class="hidden space-y-6">
+            <!-- טופס משקל -->
+            <div class="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
+                <h2 id="weight-form-title" class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">⚖️ תיעוד משקל חדש</h2>
+                <form id="weight-form" onsubmit="saveWeight(event)" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">תאריך</label>
+                            <input type="date" id="weight-date" required class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">משקל בק"ג (למשל: 4.250)</label>
+                            <input type="number" step="0.001" id="weight-value" placeholder="4.200" required class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-500">
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="submit" id="btn-save-weight" class="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-4 rounded-xl shadow transition-colors flex items-center justify-center gap-2">
+                            <span>💾 שמור משקל</span>
+                        </button>
+                        <button type="button" id="btn-cancel-weight" onclick="cancelWeightEdit()" class="hidden bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-4 rounded-xl transition-colors">בטל</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- גרף משקל -->
+            <div class="bg-white rounded-2xl p-4 shadow-md border border-gray-100">
+                <h3 class="text-sm font-bold text-gray-700 mb-2">📊 גרף מגמת משקל (ק"ג)</h3>
+                <div class="h-44 w-full">
+                    <canvas id="weightChart"></canvas>
+                </div>
+            </div>
+
+            <!-- רשימת משקלים -->
+            <div class="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">📋 מעקב שקילה</h2>
+                <div id="weights-list" class="space-y-4 text-center py-4 text-gray-400">טוען משקלים...</div>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- 💡 אזור תובנות AI חכמות (משותף תמיד בתחתית) -->
+        <!-- ============================================== -->
+        <div class="bg-pink-50 border border-pink-100 rounded-2xl p-5 shadow-sm mt-6">
+            <h3 class="text-sm font-black text-pink-700 flex items-center gap-2 mb-2">
+                <span>💡 תובנת AI חכמה:</span>
+            </h3>
+            <p id="ai-insights-text" class="text-xs text-pink-900 leading-relaxed">
+                מחשב נתונים ותובנות מעודדות...
+            </p>
+        </div>
+
     </div>
 
+    <!-- ============================================== -->
+    <!-- קוד הפעלה ואפליקציה (JS) -->
+    <!-- ============================================== -->
     <script>
-        // הגדרת תאריך ושעה אוטומטיים לפי שעון ישראל המקומי
+        // רשימת פרגונים
+        const compliments = {
+            "מוריה": [
+                "מורי, את פשוט אמא לביאה והאישה הכי טובה בעולם! ❤️",
+                "אין על אמא מוריה, אלופת העולם! תודה על כל טיפה 🌟",
+                "מוריה, את השראה. איזו אמא מדהימה ומסורה!",
+                "הקטנטנה זכתה באמא הכי חמה ודואגת שיש 🏆"
+            ],
+            "יאיר": [
+                "יאיר, אבא אלוף ומסור! הקטנה בידיים הכי טובות 👑",
+                "תודה אבא יאיר! מגיע לך כוס קפה מפנקת עכשיו ☕",
+                "אין על העזרה והשותפות שלך, יאיר! אלוף!",
+                "עבודה מעולה אבא! צוות מנצח 💪"
+            ],
+            "אחר": [
+                "תודה רבה על העזרה הגדולה! אתם פשוט מלאכים 👼",
+                "אין כמו משפחה וחברים שתומכים, תודה רבה!"
+            ]
+        };
+
+        let mealsChartInstance = null;
+        let weightChartInstance = null;
+
+        // אתחול ערכי ברירת מחדל
         function initFormDefaults() {
             const now = new Date();
-            // התאמה לאזור זמן ישראל
             const localOffset = now.getTimezoneOffset() * 60000;
             const localISOTime = new Date(now.getTime() - localOffset).toISOString();
             
@@ -155,33 +315,47 @@
             const currentTime = now.toTimeString().substring(0, 5);
 
             document.getElementById('meal-date').value = currentDate;
+            document.getElementById('diaper-date').value = currentDate;
             document.getElementById('weight-date').value = currentDate;
+            
             document.getElementById('meal-start').value = currentTime;
+            document.getElementById('diaper-time').value = currentTime;
         }
 
-        // מעבר בין כרטיסיות
+        // תצוגת פרגון חם קופץ
+        function triggerCompliment(user) {
+            const list = compliments[user] || compliments["אחר"];
+            const phrase = list[Math.floor(Math.random() * list.length)];
+            const toast = document.getElementById('compliment-toast');
+            const toastText = document.getElementById('compliment-text');
+            
+            toastText.innerText = phrase;
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 6000);
+        }
+
+        // החלפת כרטיסיות (Tabs)
         function switchTab(tab) {
-            const tabMeals = document.getElementById('tab-meals-content');
-            const tabWeight = document.getElementById('tab-weight-content');
-            const btnMeals = document.getElementById('btn-meals');
-            const btnWeight = document.getElementById('btn-weight');
+            const areas = ['meals', 'diapers', 'weight'];
+            areas.forEach(a => {
+                document.getElementById(`tab-${a}-content`).classList.add('hidden');
+                document.getElementById(`btn-${a}`).className = "flex-1 py-2.5 text-center rounded-lg font-bold text-gray-500 hover:bg-gray-50 transition-all text-sm";
+            });
 
-            if (tab === 'meals') {
-                tabMeals.classList.remove('hidden');
-                tabWeight.classList.add('hidden');
-                btnMeals.className = "flex-1 py-2 text-center rounded-md font-medium text-pink-600 bg-pink-50 transition-all";
-                btnWeight.className = "flex-1 py-2 text-center rounded-md font-medium text-gray-500 hover:bg-gray-50 transition-all";
-                loadMeals();
-            } else {
-                tabMeals.classList.add('hidden');
-                tabWeight.classList.remove('hidden');
-                btnMeals.className = "flex-1 py-2 text-center rounded-md font-medium text-gray-500 hover:bg-gray-50 transition-all";
-                btnWeight.className = "flex-1 py-2 text-center rounded-md font-medium text-pink-600 bg-pink-50 transition-all";
-                loadWeights();
-            }
+            document.getElementById(`tab-${tab}-content`).classList.remove('hidden');
+            document.getElementById(`btn-${tab}`).className = "flex-1 py-2.5 text-center rounded-lg font-bold text-pink-600 bg-pink-50 transition-all text-sm";
+
+            if (tab === 'meals') { loadMeals(); }
+            if (tab === 'diapers') { loadDiapers(); }
+            if (tab === 'weight') { loadWeights(); }
         }
 
-        // טעינת ארוחות והצגת סכום יומי
+        // ==============================================
+        <!-- ארוחות - קוד טיפול -->
+        // ==============================================
         async function loadMeals() {
             const listEl = document.getElementById('meals-list');
             try {
@@ -189,92 +363,97 @@
                     .from('meals')
                     .select('*')
                     .order('date', { ascending: false })
-                    .order('start_time', { ascending: false })
-                    .limit(20);
+                    .order('start_time', { ascending: false });
 
                 if (error) throw error;
 
                 if (!data || data.length === 0) {
                     listEl.innerHTML = '<div class="text-gray-400 py-4">אין עדיין ארוחות רשומות.</div>';
-                    document.getElementById('daily-total-ml').innerText = '0';
+                    updateMealsDashboard([]);
+                    renderMealsChart([]);
                     return;
                 }
 
-                // חישוב סך הכל יומי של מ"ל (להיום בלבד)
-                const todayStr = new Date().toLocaleDateString('sv-SE'); // "YYYY-MM-DD" בשעון מקומי
-                const dailyTotal = data
-                    .filter(m => m.date === todayStr)
-                    .reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
+                updateMealsDashboard(data);
+                renderMealsChart(data);
+                generateAIInsights(data);
 
-                document.getElementById('daily-total-ml').innerText = dailyTotal;
-
-                // יצירת רשימת הארוחות להצגה
                 listEl.innerHTML = data.map(meal => {
                     const formattedDate = formatDate(meal.date);
+                    const duration = calculateDuration(meal.start_time, meal.end_time);
+                    
+                    // עיצוב אזהרת השתנקות/סקשן
+                    const hasChoking = meal.choking === true || meal.choking === 'true';
+                    const hasSuction = meal.suction === true || meal.suction === 'true';
+                    const alertBadge = (hasChoking || hasSuction)
+                        ? `<span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">⚠️ ${hasChoking ? 'השתנקות' : ''} ${hasSuction ? 'סאקשן' : ''}</span>`
+                        : '';
+
                     return `
-                        <div class="border-b border-gray-100 last:border-0 pb-3 last:pb-0 pt-2 text-right">
+                        <div class="border-b border-gray-100 last:border-0 pb-4 last:pb-0 pt-2 text-right">
                             <div class="flex justify-between items-start mb-1">
-                                <span class="font-bold text-gray-800 text-sm">${meal.type} - ${meal.amount} מ"ל</span>
-                                <span class="text-xs text-pink-500 bg-pink-50 px-2 py-0.5 rounded-full font-medium">${meal.status}</span>
+                                <span class="font-bold text-gray-800 text-sm">
+                                    ${meal.type} - ${meal.amount} מ"ל
+                                    <span class="text-xs text-gray-400 font-normal mr-2">(האכיל/ה: ${meal.fed_by || 'מוריה'})</span>
+                                </span>
+                                <div class="flex gap-1.5 items-center">
+                                    ${alertBadge}
+                                    <span class="text-xs text-pink-500 bg-pink-50 px-2 py-0.5 rounded-full font-medium">${meal.status}</span>
+                                </div>
                             </div>
-                            <div class="text-xs text-gray-400 flex justify-between">
-                                <span>📅 ${formattedDate} | ⏰ ${meal.start_time}${meal.end_time ? ' - ' + meal.end_time : ''}</span>
-                                <button onclick="deleteRow('meals', '${meal.id}')" class="text-red-400 hover:text-red-600 font-bold px-1">🗑️</button>
+                            <div class="text-xs text-gray-400 flex justify-between items-center mt-1">
+                                <span>📅 ${formattedDate} | ⏰ ${meal.start_time}${meal.end_time ? ' - ' + meal.end_time : ''} ${duration ? `(${duration} דק')` : ''}</span>
+                                <div class="flex gap-2">
+                                    <button onclick="editMeal('${meal.id}', '${meal.date}', '${meal.amount}', '${meal.start_time}', '${meal.end_time || ''}', '${meal.type}', '${meal.status}', '${meal.fed_by || 'מוריה'}', ${hasChoking}, ${hasSuction}, '${meal.notes || ''}')" class="text-blue-500 hover:text-blue-700 font-bold">✏️ עריכה</button>
+                                    <button onclick="deleteRow('meals', '${meal.id}')" class="text-red-400 hover:text-red-600 font-bold">🗑️</button>
+                                </div>
                             </div>
-                            ${meal.notes ? `<p class="text-xs text-gray-500 bg-gray-50 p-2 rounded mt-1 border-r-2 border-pink-300">${meal.notes}</p>` : ''}
+                            ${meal.notes ? `<p class="text-xs text-gray-500 bg-gray-50 p-2 rounded mt-1.5 border-r-2 border-pink-300">${meal.notes}</p>` : ''}
                         </div>
                     `;
                 }).join('');
 
             } catch (err) {
                 console.error(err);
-                listEl.innerHTML = '<div class="text-red-500 py-4">שגיאה בטעינת הארוחות. בדוק חיבור לרשת.</div>';
+                listEl.innerHTML = '<div class="text-red-500 py-4">שגיאה בטעינת הארוחות.</div>';
             }
         }
 
-        // טעינת משקלים
-        async function loadWeights() {
-            const listEl = document.getElementById('weights-list');
-            try {
-                const { data, error } = await supabaseClient
-                    .from('weights')
-                    .select('*')
-                    .order('date', { ascending: false })
-                    .limit(10);
+        function updateMealsDashboard(data) {
+            const todayStr = new Date().toLocaleDateString('sv-SE');
+            
+            // 1. כמות יומית
+            const dailyTotal = data
+                .filter(m => m.date === todayStr)
+                .reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
+            document.getElementById('daily-total-ml').innerText = dailyTotal;
 
-                if (error) throw error;
+            // 2. כמות ארוחות ממוצעת ביום
+            const uniqueDates = [...new Set(data.map(m => m.date))];
+            const avgMeals = uniqueDates.length > 0 ? (data.length / uniqueDates.length).toFixed(1) : 0;
+            document.getElementById('stats-meals-count').innerText = avgMeals;
 
-                if (!data || data.length === 0) {
-                    listEl.innerHTML = '<div class="text-gray-400 py-4">אין עדיין שקילות רשומות.</div>';
-                    return;
+            // 3. משך ארוחה ממוצע
+            let totalDuration = 0;
+            let durationCount = 0;
+            data.forEach(m => {
+                const dur = calculateDuration(m.start_time, m.end_time);
+                if (dur !== null) {
+                    totalDuration += dur;
+                    durationCount++;
                 }
-
-                listEl.innerHTML = data.map(w => {
-                    const formattedDate = formatDate(w.date);
-                    return `
-                        <div class="flex justify-between items-center border-b border-gray-100 last:border-0 py-3 text-right">
-                            <div>
-                                <span class="font-bold text-gray-800">${w.weight} ק"ג</span>
-                                <span class="text-xs text-gray-400 block">📅 ${formattedDate}</span>
-                            </div>
-                            <button onclick="deleteRow('weights', '${w.id}')" class="text-red-400 hover:text-red-600 font-bold px-2">🗑️ מחיקה</button>
-                        </div>
-                    `;
-                }).join('');
-
-            } catch (err) {
-                console.error(err);
-                listEl.innerHTML = '<div class="text-red-500 py-4">שגיאה בטעינת משקלים.</div>';
-            }
+            });
+            const avgDuration = durationCount > 0 ? Math.round(totalDuration / durationCount) : 0;
+            document.getElementById('stats-avg-duration').innerText = avgDuration;
         }
 
-        // שמירת ארוחה
         async function saveMeal(e) {
             e.preventDefault();
             const btn = document.getElementById('btn-save-meal');
             btn.disabled = true;
             btn.innerHTML = '<span>שומר...</span>';
 
+            const fedBy = document.getElementById('meal-fed-by').value;
             const payload = {
                 date: document.getElementById('meal-date').value,
                 amount: parseInt(document.getElementById('meal-amount').value),
@@ -282,16 +461,30 @@
                 end_time: document.getElementById('meal-end').value || null,
                 type: document.getElementById('meal-type').value,
                 status: document.getElementById('meal-status').value,
+                fed_by: fedBy,
+                choking: document.getElementById('meal-choking').checked,
+                suction: document.getElementById('meal-suction').checked,
                 notes: document.getElementById('meal-notes').value || null
             };
 
             try {
-                const { error } = await supabaseClient.from('meals').insert([payload]);
-                if (error) throw error;
+                if (editingMealId) {
+                    // עדכון ארוחה קיימת
+                    const { error } = await supabaseClient.from('meals').update(payload).eq('id', editingMealId);
+                    if (error) throw error;
+                    cancelMealEdit();
+                } else {
+                    // יצירת ארוחה חדשה
+                    const { error } = await supabaseClient.from('meals').insert([payload]);
+                    if (error) throw error;
+                    triggerCompliment(fedBy);
+                }
 
-                // איפוס שדות מהיר
+                // איפוס
                 document.getElementById('meal-amount').value = '';
                 document.getElementById('meal-notes').value = '';
+                document.getElementById('meal-choking').checked = false;
+                document.getElementById('meal-suction').checked = false;
                 initFormDefaults();
                 await loadMeals();
             } catch (err) {
@@ -302,7 +495,184 @@
             }
         }
 
-        // שמירת משקל
+        function editMeal(id, date, amount, start, end, type, status, fedBy, choking, suction, notes) {
+            editingMealId = id;
+            document.getElementById('meal-form-title').innerText = '✏️ עריכת ארוחה';
+            document.getElementById('meal-date').value = date;
+            document.getElementById('meal-amount').value = amount;
+            document.getElementById('meal-start').value = start;
+            document.getElementById('meal-end').value = end;
+            document.getElementById('meal-type').value = type;
+            document.getElementById('meal-status').value = status;
+            document.getElementById('meal-fed-by').value = fedBy;
+            document.getElementById('meal-choking').checked = choking;
+            document.getElementById('meal-suction').checked = suction;
+            document.getElementById('meal-notes').value = notes;
+
+            document.getElementById('btn-save-meal').innerHTML = '<span>💾 עדכן ארוחה</span>';
+            document.getElementById('btn-cancel-meal').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelMealEdit() {
+            editingMealId = null;
+            document.getElementById('meal-form-title').innerText = '➕ תיעוד ארוחה חדשה';
+            document.getElementById('btn-save-meal').innerHTML = '<span>💾 שמור ארוחה</span>';
+            document.getElementById('btn-cancel-meal').classList.add('hidden');
+            document.getElementById('meal-amount').value = '';
+            document.getElementById('meal-notes').value = '';
+            document.getElementById('meal-choking').checked = false;
+            document.getElementById('meal-suction').checked = false;
+            initFormDefaults();
+        }
+
+        // ==============================================
+        <!-- טיטולים - קוד טיפול -->
+        // ==============================================
+        async function loadDiapers() {
+            const listEl = document.getElementById('diapers-list');
+            try {
+                const { data, error } = await supabaseClient
+                    .from('diapers')
+                    .select('*')
+                    .order('date', { ascending: false })
+                    .order('time', { ascending: false });
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    listEl.innerHTML = '<div class="text-gray-400 py-4">אין עדיין טיטולים רשומים.</div>';
+                    return;
+                }
+
+                listEl.innerHTML = data.map(diaper => {
+                    const formattedDate = formatDate(diaper.date);
+                    return `
+                        <div class="border-b border-gray-100 last:border-0 pb-4 last:pb-0 pt-2 text-right">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="font-bold text-gray-800 text-sm">
+                                    ${diaper.type} (${diaper.amount})
+                                </span>
+                                <div class="flex gap-2">
+                                    <button onclick="editDiaper('${diaper.id}', '${diaper.date}', '${diaper.time}', '${diaper.type}', '${diaper.amount}', '${diaper.notes || ''}')" class="text-xs text-blue-500 hover:text-blue-700">✏️ עריכה</button>
+                                    <button onclick="deleteRow('diapers', '${diaper.id}')" class="text-red-400 hover:text-red-600 font-bold">🗑️</button>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-400">
+                                📅 ${formattedDate} | ⏰ ${diaper.time}
+                            </div>
+                            ${diaper.notes ? `<p class="text-xs text-gray-500 bg-gray-50 p-2 rounded mt-1.5 border-r-2 border-purple-300">${diaper.notes}</p>` : ''}
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error(err);
+                listEl.innerHTML = '<div class="text-red-500 py-4">שגיאה בטעינת הטיטולים.</div>';
+            }
+        }
+
+        async function saveDiaper(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-save-diaper');
+            btn.disabled = true;
+            btn.innerHTML = '<span>שומר...</span>';
+
+            const payload = {
+                date: document.getElementById('diaper-date').value,
+                time: document.getElementById('diaper-time').value,
+                type: document.getElementById('diaper-type').value,
+                amount: document.getElementById('diaper-amount').value,
+                notes: document.getElementById('diaper-notes').value || null
+            };
+
+            try {
+                if (editingDiaperId) {
+                    const { error } = await supabaseClient.from('diapers').update(payload).eq('id', editingDiaperId);
+                    if (error) throw error;
+                    cancelDiaperEdit();
+                } else {
+                    const { error } = await supabaseClient.from('diapers').insert([payload]);
+                    if (error) throw error;
+                }
+
+                document.getElementById('diaper-notes').value = '';
+                initFormDefaults();
+                await loadDiapers();
+            } catch (err) {
+                alert('שגיאה בשמירת הטיטול: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>💾 שמור טיטול</span>';
+            }
+        }
+
+        function editDiaper(id, date, time, type, amount, notes) {
+            editingDiaperId = id;
+            document.getElementById('diaper-form-title').innerText = '✏️ עריכת טיטול';
+            document.getElementById('diaper-date').value = date;
+            document.getElementById('diaper-time').value = time;
+            document.getElementById('diaper-type').value = type;
+            document.getElementById('diaper-amount').value = amount;
+            document.getElementById('diaper-notes').value = notes;
+
+            document.getElementById('btn-save-diaper').innerHTML = '<span>💾 עדכן טיטול</span>';
+            document.getElementById('btn-cancel-diaper').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelDiaperEdit() {
+            editingDiaperId = null;
+            document.getElementById('diaper-form-title').innerText = '💩 תיעוד טיטול';
+            document.getElementById('btn-save-diaper').innerHTML = '<span>💾 שמור טיטול</span>';
+            document.getElementById('btn-cancel-diaper').classList.add('hidden');
+            document.getElementById('diaper-notes').value = '';
+            initFormDefaults();
+        }
+
+        // ==============================================
+        <!-- משקל - קוד טיפול -->
+        // ==============================================
+        async function loadWeights() {
+            const listEl = document.getElementById('weights-list');
+            try {
+                const { data, error } = await supabaseClient
+                    .from('weights')
+                    .select('*')
+                    .order('date', { ascending: false });
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    listEl.innerHTML = '<div class="text-gray-400 py-4">אין עדיין שקילות רשומות.</div>';
+                    renderWeightChart([]);
+                    return;
+                }
+
+                renderWeightChart(data);
+
+                listEl.innerHTML = data.map(w => {
+                    const formattedDate = formatDate(w.date);
+                    return `
+                        <div class="flex justify-between items-center border-b border-gray-100 last:border-0 py-3 text-right">
+                            <div>
+                                <span class="font-bold text-gray-800">${w.weight} ק"ג</span>
+                                <span class="text-xs text-gray-400 block">📅 ${formattedDate}</span>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="editWeight('${w.id}', '${w.date}', '${w.weight}')" class="text-xs text-blue-500">✏️ עריכה</button>
+                                <button onclick="deleteRow('weights', '${w.id}')" class="text-red-400 hover:text-red-600 font-bold">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error(err);
+                listEl.innerHTML = '<div class="text-red-500 py-4">שגיאה בטעינת משקלים.</div>';
+            }
+        }
+
         async function saveWeight(e) {
             e.preventDefault();
             const btn = document.getElementById('btn-save-weight');
@@ -315,8 +685,14 @@
             };
 
             try {
-                const { error } = await supabaseClient.from('weights').insert([payload]);
-                if (error) throw error;
+                if (editingWeightId) {
+                    const { error } = await supabaseClient.from('weights').update(payload).eq('id', editingWeightId);
+                    if (error) throw error;
+                    cancelWeightEdit();
+                } else {
+                    const { error } = await supabaseClient.from('weights').insert([payload]);
+                    if (error) throw error;
+                }
 
                 document.getElementById('weight-value').value = '';
                 await loadWeights();
@@ -328,21 +704,44 @@
             }
         }
 
-        // מחיקת שורה
+        function editWeight(id, date, value) {
+            editingWeightId = id;
+            document.getElementById('weight-form-title').innerText = '✏️ עריכת משקל';
+            document.getElementById('weight-date').value = date;
+            document.getElementById('weight-value').value = value;
+
+            document.getElementById('btn-save-weight').innerHTML = '<span>💾 עדכן משקל</span>';
+            document.getElementById('btn-cancel-weight').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelWeightEdit() {
+            editingWeightId = null;
+            document.getElementById('weight-form-title').innerText = '⚖️ תיעוד משקל חדש';
+            document.getElementById('btn-save-weight').innerHTML = '<span>💾 שמור משקל</span>';
+            document.getElementById('btn-cancel-weight').classList.add('hidden');
+            document.getElementById('weight-value').value = '';
+            initFormDefaults();
+        }
+
+        // מחיקת שורה כללית
         async function deleteRow(table, id) {
-            if (!confirm('האם אתה בטוח שברצונך למחוק תיעוד זה?')) return;
+            if (!confirm('האם אתם בטוחים שברצונכם למחוק את הרישום הזה?')) return;
             try {
                 const { error } = await supabaseClient.from(table).delete().eq('id', id);
                 if (error) throw error;
 
                 if (table === 'meals') loadMeals();
-                else loadWeights();
+                if (table === 'diapers') loadDiapers();
+                if (table === 'weights') loadWeights();
             } catch (err) {
                 alert('שגיאה במחיקה: ' + err.message);
             }
         }
 
-        // פורמט תאריך נחמן לעין (DD.MM)
+        // ==============================================
+        <!-- פונקציות עזר וגרפים -->
+        // ==============================================
         function formatDate(dateStr) {
             if (!dateStr) return '';
             const parts = dateStr.split('-');
@@ -350,6 +749,130 @@
                 return `${parts[2]}/${parts[1]}/${parts[0].slice(2)}`;
             }
             return dateStr;
+        }
+
+        function calculateDuration(start, end) {
+            if (!start || !end) return null;
+            const [startH, startM] = start.split(':').map(Number);
+            const [endH, endM] = end.split(':').map(Number);
+            
+            let diff = (endH * 60 + endM) - (startH * 60 + startM);
+            if (diff < 0) diff += 1440; // מעבר חצות
+            return diff;
+        }
+
+        // בניית גרף כמויות יומי
+        function renderMealsChart(meals) {
+            const ctx = document.getElementById('mealsChart').getContext('2d');
+            
+            // קיבוץ כמויות לפי תאריך (7 ימים אחרונים שיש בהם נתונים)
+            const grouped = {};
+            meals.forEach(m => {
+                grouped[m.date] = (grouped[m.date] || 0) + Number(m.amount);
+            });
+
+            const sortedDates = Object.keys(grouped).sort().slice(-7);
+            const labels = sortedDates.map(d => formatDate(d));
+            const dataValues = sortedDates.map(d => grouped[d]);
+
+            if (mealsChartInstance) { mealsChartInstance.destroy(); }
+
+            mealsChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'סה"כ מ"ל ביום',
+                        data: dataValues,
+                        backgroundColor: 'rgba(219, 39, 119, 0.7)',
+                        borderColor: 'rgb(219, 39, 119)',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // בניית גרף מגמת משקל
+        function renderWeightChart(weights) {
+            const ctx = document.getElementById('weightChart').getContext('2d');
+            
+            const sorted = [...weights].sort((a,b) => new Date(a.date) - new Date(b.date)).slice(-10);
+            const labels = sorted.map(w => formatDate(w.date));
+            const dataValues = sorted.map(w => w.weight);
+
+            if (weightChartInstance) { weightChartInstance.destroy(); }
+
+            weightChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'משקל בק"ג',
+                        data: dataValues,
+                        borderColor: '#db2777',
+                        backgroundColor: 'rgba(219, 39, 119, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.3,
+                        fill: true,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#db2777'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: false }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // מחולל תובנות AI חכמות
+        function generateAIInsights(meals) {
+            const insightBox = document.getElementById('ai-insights-text');
+            if (meals.length === 0) {
+                insightBox.innerText = "הזינו נתונים כדי שה-AI יתחיל ללמוד ולנתח את קצב ההתקדמות של הנסיכה!";
+                return;
+            }
+
+            // חישוב ממוצע נפח ארוחה
+            const totalAmount = meals.reduce((sum, m) => sum + Number(m.amount), 0);
+            const avgAmount = Math.round(totalAmount / meals.length);
+
+            // בדיקת הימצאות סקשנים השבוע
+            const suctionCount = meals.filter(m => m.suction === true || m.suction === 'true').length;
+
+            let insights = `**מבט על הארוחות:** בממוצע, הנסיכה אוכלת **${avgAmount} מ"ל** לכל ארוחה. `;
+            
+            if (avgAmount >= 80) {
+                insights += "מדובר בכמויות מעולות ויציבות שמראות על תיאבון בריא והתפתחות טובה! 🌟 ";
+            } else {
+                insights += "הכמויות קטנות ותכופות, וזה לגמרי נורמלי לשלב זה. המשיכו לעקוב! 💖 ";
+            }
+
+            if (suctionCount > 0) {
+                insights += `<br>**מעקב בטיחות:** נרשמו ${suctionCount} מקרים של שימוש בסקשן לאחרונה. שימו לב לקצב האכילה בגסטרוסטום כדי להקל עליה. אתם הורים מדהימים ועושים עבודה פשוט מושלמת! ⭐`;
+            } else {
+                insights += "<br>**סיכום נשימתי:** שקט בגזרה! לא נרשמו השתנקויות או שימוש בסקשן לאחרונה. פשוט מושלם! 🌸";
+            }
+
+            // החלפת ה-Markdown הקצר של הטקסט לתצוגה מעוצבת
+            insightBox.innerHTML = insights.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         }
 
         // אתחול דף ראשוני
