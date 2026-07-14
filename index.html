@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מעקב ארוחות ומשקל</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen pb-12">
+    <script>
+        // חיבור ל-Supabase שלכם
+        const supabaseUrl = 'https://saimcftloeorzqowjpal.supabase.co';
+        const supabaseKey = 'sb_publishable_WrZ4VtkXGmxpKwyTSvQJOA_h6iefkLv';
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+    </script>
+
+    <div class="max-w-md mx-auto px-4 py-6">
+        <!-- כותרת ראשית -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-pink-600">הנסיכה הקטנה 👶💖</h1>
+            <p class="text-gray-500 mt-1">מעקב ארוחות ומשקל משותף</p>
+        </header>
+
+        <!-- כרטיסיית ניווט מהירה -->
+        <div class="flex border-b border-gray-200 mb-6">
+            <button onclick="switchTab('meals')" id="tab-meals" class="flex-1 py-3 text-center font-semibold text-pink-600 border-b-2 border-pink-600 focus:outline-none">🍗 ארוחות</button>
+            <button onclick="switchTab('weights')" id="tab-weights" class="flex-1 py-3 text-center font-semibold text-gray-500 hover:text-pink-600 focus:outline-none">⚖️ משקל</button>
+        </div>
+
+        <!-- אזור ארוחות -->
+        <div id="section-meals" class="space-y-6">
+            <!-- טופס הוספת ארוחה -->
+            <form id="meal-form" onsubmit="saveMeal(event)" class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                <h2 class="text-lg font-bold text-gray-700 mb-2">➕ תיעוד ארוחה חדשה</h2>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">תאריך</label>
+                        <input type="date" id="meal-date" required class="w-full p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-pink-300 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">כמות (מ"ל)</label>
+                        <input type="number" id="meal-amount" placeholder="למשל 120" required class="w-full p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-pink-300 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">שעת התחלה</label>
+                        <input type="time" id="meal-start" required class="w-full p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-pink-300 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">שעת סיום</label>
+                        <input type="time" id="meal-end" required class="w-full p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-pink-300 focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1">סוג האכלה</label>
+                    <select id="meal-source" required class="w-full p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-pink-300 focus:outline-none">
+                        <option value="הנקה">🤱 הנקה</option>
+                        <option value="חלב שאוב">🍼 חלב שאוב</option>
+                        <option value="תמ״ל">👶 תמ״ל (מטרנה/סימילאק)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1">מצב הארוחה (איך אכלה?)</label>
+                    <select id="meal-status" required class="w-full p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-pink-300 focus:outline-none">
+                        <option value="סיימה הכל">✅ סיימה הכל בשמחה</option>
+                        <option value="אכלה רוב">👍 אכלה את הרוב</option>
+                        <option value="אכלה חלקית">⚠️ אכלה רק קצת / פלטה</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1">הערות מיוחדות</label>
+                    <textarea id="meal-notes" rows="2" placeholder="למשל: הייתה עייפה, פלטה קצת בסוף..." class="w-full p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-pink-300 focus:outline-none"></textarea>
+                </div>
+
+                <button type="submit" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 rounded-lg shadow-md transition-colors duration-200">💾 שמור ארוחה</button>
+            </form>
+
+            <!-- רשימת ארוחות אחרונות -->
+            <div class="space-y-3">
+                <h2 class="text-lg font-bold text-gray-700">📋 ארוחות אחרונות</h2>
+                <div id="meals-list" class="space-y-3">
+                    <div class="text-center text-gray-400 py-6">טוען ארוחות...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- אזור משקל -->
+        <div id="section-weights" class="hidden space-y-6">
+            <!-- טופס הוספת משקל -->
+            <form id="weight-form" onsubmit="saveWeight(event)" class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                <h2 class="text-lg font-bold text-gray-700 mb-2">⚖️ תיעוד משקל חדש</h2>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">תאריך שקילה</label>
+                        <input type="date" id="weight-date" required class="w-full p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-pink-300 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">משקל (בק"ג, למשל 4.250)</label>
+                        <input type="number" step="0.001" id="weight-val" placeholder="0.000" required class="w-full p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-pink-300 focus:outline-none">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 rounded-lg shadow-md transition-colors duration-200">💾 שמור משקל</button>
+            </form>
+
+            <!-- רשימת משקלים אחרונים -->
+            <div class="space-y-3">
+                <h2 class="text-lg font-bold text-gray-700">📈 היסטוריית שקילה</h2>
+                <div id="weights-list" class="space-y-3">
+                    <div class="text-center text-gray-400 py-6">טוען נתוני משקל...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // אתחול תאריכים ושעות לברירת מחדל של "עכשיו"
+        const now = new Date();
+        const offset = now.getTimezoneOffset() * 60000;
+        const localISOTime = (new Date(now - offset)).toISOString();
+        
+        document.getElementById('meal-date').value = localISOTime.split('T')[0];
+        document.getElementById('weight-date').value = localISOTime.split('T')[0];
+        
+        // הגדרת שעת התחלה כעכשיו ושעת סיום כעוד 15 דקות
+        const formatTime = (date) => {
+            return String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0');
+        };
+        document.getElementById('meal-start').value = formatTime(now);
+        const endNow = new Date(now.getTime() + 15 * 60000);
+        document.getElementById('meal-end').value = formatTime(endNow);
+
+        // מעבר בין טאבים
+        function switchTab(tab) {
+            if (tab === 'meals') {
+                document.getElementById('section-meals').classList.remove('hidden');
+                document.getElementById('section-weights').classList.add('hidden');
+                document.getElementById('tab-meals').className = "flex-1 py-3 text-center font-semibold text-pink-600 border-b-2 border-pink-600 focus:outline-none";
+                document.getElementById('tab-weights').className = "flex-1 py-3 text-center font-semibold text-gray-500 hover:text-pink-600 focus:outline-none";
+                loadMeals();
+            } else {
+                document.getElementById('section-meals').classList.add('hidden');
+                document.getElementById('section-weights').classList.remove('hidden');
+                document.getElementById('tab-meals').className = "flex-1 py-3 text-center font-semibold text-gray-500 hover:text-pink-600 focus:outline-none";
+                document.getElementById('tab-weights').className = "flex-1 py-3 text-center font-semibold text-pink-600 border-b-2 border-pink-600 focus:outline-none";
+                loadWeights();
+            }
+        }
+
+        // טעינת ארוחות מ-Supabase
+        async function loadMeals() {
+            const listDiv = document.getElementById('meals-list');
+            const { data, error } = await supabase
+                .from('meals')
+                .select('*')
+                .order('date', { ascending: false })
+                .order('start_time', { ascending: false })
+                .limit(20);
+
+            if (error) {
+                listDiv.innerHTML = `<div class="text-red-500 text-center py-4">שגיאה בטעינת נתונים</div>`;
+                return;
+            }
+
+            if (data.length === 0) {
+                listDiv.innerHTML = `<div class="text-gray-400 text-center py-6">טרם תועדו ארוחות.</div>`;
+                return;
+            }
+
+            listDiv.innerHTML = data.map(m => {
+                const mealDate = new Date(m.date).toLocaleDateString('he-IL', {day: 'numeric', month: 'numeric'});
+                let statusColor = "bg-green-100 text-green-800";
+                if (m.status.includes('רוב')) statusColor = "bg-blue-100 text-blue-800";
+                if (m.status.includes('חלקית')) statusColor = "bg-yellow-100 text-yellow-800";
+
+                return `
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-gray-800">${m.source} - ${m.amount} מ"ל</span>
+                            <span class="text-xs text-gray-400 font-medium">${mealDate} | ${m.start_time.substring(0,5)}-${m.end_time.substring(0,5)}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs px-2 py-1 rounded-full ${statusColor} font-semibold">${m.status}</span>
+                        </div>
+                        ${m.notes ? `<p class="text-sm text-gray-500 bg-gray-50 p-2 rounded-lg border-r-2 border-pink-400 mt-1">${m.notes}</p>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // שמירת ארוחה ל-Supabase
+        async function saveMeal(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.innerText = "שומר...";
+
+            const meal = {
+                date: document.getElementById('meal-date').value,
+                amount: parseInt(document.getElementById('meal-amount').value),
+                start_time: document.getElementById('meal-start').value,
+                end_time: document.getElementById('meal-end').value,
+                source: document.getElementById('meal-source').value,
+                status: document.getElementById('meal-status').value,
+                notes: document.getElementById('meal-notes').value || null
+            };
+
+            const { error } = await supabase.from('meals').insert([meal]);
+
+            if (error) {
+                alert('אופס, השמירה נכשלה. נסה שוב.');
+            } else {
+                document.getElementById('meal-amount').value = '';
+                document.getElementById('meal-notes').value = '';
+                loadMeals();
+            }
+            btn.disabled = false;
+            btn.innerText = "💾 שמור ארוחה";
+        }
+
+        // טעינת משקל מ-Supabase
+        async function loadWeights() {
+            const listDiv = document.getElementById('weights-list');
+            const { data, error } = await supabase
+                .from('weights')
+                .select('*')
+                .order('date', { ascending: false })
+                .limit(20);
+
+            if (error) {
+                listDiv.innerHTML = `<div class="text-red-500 text-center py-4">שגיאה בטעינת משקלים</div>`;
+                return;
+            }
+
+            if (data.length === 0) {
+                listDiv.innerHTML = `<div class="text-gray-400 text-center py-6">טרם תועדו שקילות.</div>`;
+                return;
+            }
+
+            listDiv.innerHTML = data.map((w, idx) => {
+                const wDate = new Date(w.date).toLocaleDateString('he-IL', {day: 'numeric', month: 'numeric', year: '2-digit'});
+                let diffHtml = '';
+                
+                // חישוב הפרש מהשקילה הקודמת (הכרונולוגית הבאה ברשימה)
+                if (idx < data.length - 1) {
+                    const prevWeight = data[idx + 1].weight;
+                    const diff = (w.weight - prevWeight) * 1000; // הפרש בגרמים
+                    if (diff > 0) {
+                        diffHtml = `<span class="text-xs text-green-600 font-bold">📈 +${diff.toFixed(0)} גרם</span>`;
+                    } else if (diff < 0) {
+                        diffHtml = `<span class="text-xs text-red-500 font-bold">📉 ${diff.toFixed(0)} גרם</span>`;
+                    }
+                }
+
+                return `
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
+                        <div class="flex flex-col">
+                            <span class="font-bold text-gray-800 text-lg">${w.weight.toFixed(3)} ק״ג</span>
+                            <span class="text-xs text-gray-400">${wDate}</span>
+                        </div>
+                        <div>
+                            ${diffHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // שמירת משקל ל-Supabase
+        async function saveWeight(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.innerText = "שומר...";
+
+            const weightData = {
+                date: document.getElementById('weight-date').value,
+                weight: parseFloat(document.getElementById('weight-val').value)
+            };
+
+            const { error } = await supabase.from('weights').insert([weightData]);
+
+            if (error) {
+                alert('אופס, שמירת המשקל נכשלה.');
+            } else {
+                document.getElementById('weight-val').value = '';
+                loadWeights();
+            }
+            btn.disabled = false;
+            btn.innerText = "💾 שמור משקל";
+        }
+
+        // טעינה ראשונית
+        loadMeals();
+    </script>
+</body>
+</html>
